@@ -1,4 +1,4 @@
-const CACHE_NAME = 'interactive-book-v7';
+const CACHE_NAME = 'interactive-book-v8';
 const ASSETS = [
   './app-shell.html',
   './index.html',
