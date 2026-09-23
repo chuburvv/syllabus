@@ -3,9 +3,11 @@
 
   var iframe = document.querySelector('iframe');
   var fab = document.getElementById('tts-fab');
-  var state = { playing: false, cancelled: false };
+  var aiToggle = document.getElementById('ai-voice-toggle');
+  var state = { playing: false, cancelled: false, currentAudio: null };
   var HEADING_RE = /^h([1-6])$/;
   var BLOCK_SELECTOR = 'h1, h2, h3, h4, h5, h6, p, li, blockquote';
+  var AI_PREF_KEY = 'useAiVoice';
 
   function sanitizeForSpeech(text) {
     return text
@@ -92,9 +94,38 @@
     return ruVoices[0] || voices[0] || null;
   }
 
-  function speak(segments) {
+  function isAiEnabled() {
+    return localStorage.getItem(AI_PREF_KEY) === '1' && window.aiVoice;
+  }
+
+  function speakSystem(text, heading, onDone) {
     var voice = pickOfflineVoice();
+    var utter = new SpeechSynthesisUtterance(text);
+    if (voice) utter.voice = voice;
+    utter.lang = 'ru-RU';
+    utter.rate = heading ? 0.85 : 0.95;
+    utter.pitch = heading ? 1.08 : 1.0;
+    utter.onend = onDone;
+    utter.onerror = onDone;
+    speechSynthesis.speak(utter);
+  }
+
+  function speakAi(text, onDone) {
+    window.aiVoice.synthesize(text).then(function (url) {
+      var audio = new Audio(url);
+      state.currentAudio = audio;
+      audio.onended = function () { URL.revokeObjectURL(url); onDone(); };
+      audio.onerror = function () { URL.revokeObjectURL(url); onDone(); };
+      audio.play().catch(onDone);
+    }).catch(function (err) {
+      console.error('AI voice failed, falling back to system voice:', err);
+      speakSystem(text, false, onDone);
+    });
+  }
+
+  function speak(segments) {
     var i = 0;
+    var useAi = isAiEnabled();
     state.cancelled = false;
     state.playing = true;
     fab.textContent = '⏸';
@@ -107,17 +138,15 @@
     function next() {
       if (state.cancelled || i >= segments.length) { finish(); return; }
       var seg = segments[i];
-      var utter = new SpeechSynthesisUtterance(seg.text);
-      if (voice) utter.voice = voice;
-      utter.lang = 'ru-RU';
-      utter.rate = seg.heading ? 0.85 : 0.95;
-      utter.pitch = seg.heading ? 1.08 : 1.0;
-      utter.onend = function () {
+      var advance = function () {
         i++;
         setTimeout(next, seg.heading ? 900 : 600);
       };
-      utter.onerror = function () { i++; next(); };
-      speechSynthesis.speak(utter);
+      if (useAi) {
+        speakAi(seg.text, advance);
+      } else {
+        speakSystem(seg.text, seg.heading, advance);
+      }
     }
     next();
   }
@@ -126,6 +155,7 @@
     state.cancelled = true;
     state.playing = false;
     speechSynthesis.cancel();
+    if (state.currentAudio) { state.currentAudio.pause(); state.currentAudio = null; }
     fab.textContent = '🔊';
   }
 
@@ -150,6 +180,50 @@
       start();
     }
   });
+
+  function updateAiToggleLabel() {
+    if (!aiToggle) return;
+    var enabled = localStorage.getItem(AI_PREF_KEY) === '1';
+    aiToggle.textContent = enabled ? '🤖✓' : '🤖';
+    aiToggle.title = enabled ? 'ИИ-голос включён' : 'Включить ИИ-голос';
+  }
+
+  if (aiToggle) {
+    updateAiToggleLabel();
+    aiToggle.addEventListener('click', function () {
+      var enabled = localStorage.getItem(AI_PREF_KEY) === '1';
+      if (enabled) {
+        localStorage.setItem(AI_PREF_KEY, '0');
+        updateAiToggleLabel();
+        return;
+      }
+      if (!window.aiVoice) {
+        alert('ИИ-голос ещё загружается, подожди несколько секунд и попробуй снова.');
+        return;
+      }
+      window.aiVoice.isReady().then(function (ready) {
+        if (ready) {
+          localStorage.setItem(AI_PREF_KEY, '1');
+          updateAiToggleLabel();
+          return;
+        }
+        aiToggle.textContent = '⏳ 0%';
+        window.aiVoice.download(function (progress) {
+          var pct = Math.round((progress.loaded * 100) / progress.total);
+          aiToggle.textContent = '⏳ ' + pct + '%';
+        }).then(function () {
+          localStorage.setItem(AI_PREF_KEY, '1');
+          updateAiToggleLabel();
+        }).catch(function (err) {
+          console.error('AI voice model download failed:', err);
+          alert('Не удалось загрузить ИИ-голос. Проверь интернет и попробуй снова.');
+          updateAiToggleLabel();
+        });
+      });
+    });
+  }
+
+  window.addEventListener('ai-voice-ready', updateAiToggleLabel);
 
   if ('speechSynthesis' in window) {
     speechSynthesis.onvoiceschanged = function () {};

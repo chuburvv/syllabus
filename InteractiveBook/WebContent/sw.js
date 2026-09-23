@@ -1,4 +1,4 @@
-const CACHE_NAME = 'interactive-book-v8';
+const CACHE_NAME = 'interactive-book-v9';
 const ASSETS = [
   './app-shell.html',
   './index.html',
@@ -7,7 +7,8 @@ const ASSETS = [
   './reader.js',
   './manifest.json',
   './tts.js',
-  './progress.js'
+  './progress.js',
+  './ai-voice.js'
 ];
 
 self.addEventListener('install', (event) => {
