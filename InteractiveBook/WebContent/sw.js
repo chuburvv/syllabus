@@ -1,11 +1,12 @@
-const CACHE_NAME = 'interactive-book-v5';
+const CACHE_NAME = 'interactive-book-v6';
 const ASSETS = [
   './app-shell.html',
   './index.html',
   './mobile.css',
   './reader.js',
   './manifest.json',
-  './tts.js'
+  './tts.js',
+  './progress.js'
 ];
 
 self.addEventListener('install', (event) => {

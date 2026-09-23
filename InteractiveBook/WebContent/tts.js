@@ -2,7 +2,7 @@
   'use strict';
 
   var iframe = document.querySelector('iframe');
-  var stopBtn = document.getElementById('tts-stop');
+  var fab = document.getElementById('tts-fab');
   var state = { playing: false, cancelled: false };
   var HEADING_RE = /^h([1-6])$/;
   var BLOCK_SELECTOR = 'h1, h2, h3, h4, h5, h6, p, li, blockquote';
@@ -30,6 +30,26 @@
       list.push({ node: node, text: text, level: m ? parseInt(m[1], 10) : null });
     });
     return list;
+  }
+
+  function findCurrentHeadingIndex(list, win) {
+    var threshold = win.innerHeight * 0.35;
+    var best = -1;
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].level === null) continue;
+      var rect = list[i].node.getBoundingClientRect();
+      if (rect.top <= threshold) {
+        best = i;
+      }
+    }
+    if (best === -1) {
+      for (var j = 0; j < list.length; j++) {
+        if (list[j].level === null) continue;
+        var r = list[j].node.getBoundingClientRect();
+        if (r.top < win.innerHeight && r.bottom > 0) { best = j; break; }
+      }
+    }
+    return best;
   }
 
   function collectSection(startIndex, list) {
@@ -61,11 +81,11 @@
     var i = 0;
     state.cancelled = false;
     state.playing = true;
-    stopBtn.style.display = 'flex';
+    fab.textContent = '⏸';
 
     function finish() {
       state.playing = false;
-      stopBtn.style.display = 'none';
+      fab.textContent = '🔊';
     }
 
     function next() {
@@ -90,53 +110,30 @@
     state.cancelled = true;
     state.playing = false;
     speechSynthesis.cancel();
-    stopBtn.style.display = 'none';
+    fab.textContent = '🔊';
   }
 
-  stopBtn.addEventListener('click', stop);
-
-  function attachButtons(doc) {
-    var headingNodes = doc.body.querySelectorAll('h1, h2, h3, h4, h5, h6');
-    headingNodes.forEach(function (h) {
-      if (h.dataset.ttsAttached) return;
-      if (h.closest('nav, header, footer, [aria-hidden="true"]')) return;
-      if (!cleanText(h)) return;
-      h.dataset.ttsAttached = '1';
-      var btn = doc.createElement('button');
-      btn.type = 'button';
-      btn.textContent = '🔊';
-      btn.setAttribute('aria-label', 'Озвучить раздел');
-      btn.style.cssText = 'display:inline-block;margin-left:8px;border:none;background:rgba(0,0,0,0.06);' +
-        'border-radius:50%;width:1.5em;height:1.5em;font-size:0.6em;line-height:1.5em;text-align:center;' +
-        'cursor:pointer;vertical-align:middle;';
-      btn.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        if (state.playing) { stop(); }
-        var curDoc = getDoc();
-        if (!curDoc) return;
-        var list = buildFlatList(curDoc);
-        var idx = list.findIndex(function (item) { return item.node === h; });
-        if (idx === -1) return;
-        var segments = collectSection(idx, list);
-        speak(segments);
-      });
-      h.appendChild(btn);
-    });
-  }
-
-  function init() {
+  function start() {
     var doc = getDoc();
-    if (!doc || !doc.body) { setTimeout(init, 500); return; }
-    attachButtons(doc);
-    var observer = new MutationObserver(function () {
-      attachButtons(doc);
-    });
-    observer.observe(doc.body, { childList: true, subtree: true });
+    if (!doc || !doc.body) return;
+    var win = iframe.contentWindow;
+    var list = buildFlatList(doc);
+    var idx = findCurrentHeadingIndex(list, win);
+    if (idx === -1) {
+      alert('Не удалось определить текущий раздел. Прокрути страницу до нужной темы и попробуй снова.');
+      return;
+    }
+    var segments = collectSection(idx, list);
+    speak(segments);
   }
 
-  iframe.addEventListener('load', init);
-  if (iframe.contentDocument && iframe.contentDocument.readyState === 'complete') init();
+  fab.addEventListener('click', function () {
+    if (state.playing) {
+      stop();
+    } else {
+      start();
+    }
+  });
 
   if ('speechSynthesis' in window) {
     speechSynthesis.onvoiceschanged = function () {};
