@@ -7,8 +7,16 @@
   var HEADING_RE = /^h([1-6])$/;
   var BLOCK_SELECTOR = 'h1, h2, h3, h4, h5, h6, p, li, blockquote';
 
+  function sanitizeForSpeech(text) {
+    return text
+      .replace(/[«»„“”‘’'`*_#~|]/g, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
+
   function cleanText(node) {
-    return (node.textContent || '').replace(/\s+/g, ' ').trim();
+    var raw = (node.textContent || '').replace(/\s+/g, ' ').trim();
+    return sanitizeForSpeech(raw);
   }
 
   function getDoc() {
@@ -17,6 +25,10 @@
     } catch (e) {
       return null;
     }
+  }
+
+  function isRendered(rect) {
+    return rect.width > 0 || rect.height > 0;
   }
 
   function buildFlatList(doc) {
@@ -38,6 +50,7 @@
     for (var i = 0; i < list.length; i++) {
       if (list[i].level === null) continue;
       var rect = list[i].node.getBoundingClientRect();
+      if (!isRendered(rect)) continue;
       if (rect.top <= threshold) {
         best = i;
       }
@@ -46,6 +59,7 @@
       for (var j = 0; j < list.length; j++) {
         if (list[j].level === null) continue;
         var r = list[j].node.getBoundingClientRect();
+        if (!isRendered(r)) continue;
         if (r.top < win.innerHeight && r.bottom > 0) { best = j; break; }
       }
     }
@@ -58,6 +72,8 @@
     for (var i = startIndex + 1; i < list.length; i++) {
       var item = list[i];
       if (item.level !== null && item.level <= startLevel) break;
+      var rect = item.node.getBoundingClientRect();
+      if (!isRendered(rect)) continue;
       segments.push({ text: item.text, heading: item.level !== null });
     }
     return segments;
