@@ -1,4 +1,14 @@
 <!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <script>
+(function(){
+  var vp = document.querySelector('meta[name="viewport"]');
+  function fix(){
+    if (vp) vp.setAttribute('content', 'width=' + window.innerWidth + ', initial-scale=1, maximum-scale=1, user-scalable=no');
+  }
+  fix();
+  window.addEventListener('resize', fix);
+})();
+</script>
 <title>System Design для технического менеджера проектов: секция Яндекса</title><style>
 :root{--bg:#f6f7f9;--card:#fff;--ink:#1a1d23;--muted:#5f6673;--line:#e3e6eb;--accent:#fc3f1d;--pm:#1f6feb;--pmbg:#eef4ff;--ex:#1a7f4b;--exbg:#ecf8f1;--tip:#b7791f;--tipbg:#fff8e6;--warn:#b91c1c;--warnbg:#fef2f2}
     html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
