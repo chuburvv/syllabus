@@ -5,6 +5,16 @@
   var fab = document.getElementById('tts-fab');
   var state = { playing: false, cancelled: false };
 
+  function isVisible(node) {
+    if (!(node instanceof node.ownerDocument.defaultView.HTMLElement)) return false;
+    if (node.offsetParent === null && node.ownerDocument.defaultView.getComputedStyle(node).position !== 'fixed') return false;
+    var style = node.ownerDocument.defaultView.getComputedStyle(node);
+    if (style.display === 'none' || style.visibility === 'hidden' || parseFloat(style.opacity) === 0) return false;
+    var rect = node.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) return false;
+    return true;
+  }
+
   function extractSegments() {
     var doc;
     try {
@@ -18,6 +28,7 @@
     nodes.forEach(function (node) {
       var closestSkip = node.closest('nav, header, footer, button, script, style, [aria-hidden="true"]');
       if (closestSkip) return;
+      if (!isVisible(node)) return;
       var text = (node.textContent || '').replace(/\s+/g, ' ').trim();
       if (!text || text.length < 2) return;
       var tag = node.tagName.toLowerCase();
@@ -72,7 +83,7 @@
   function start() {
     var segments = extractSegments();
     if (!segments.length) {
-      alert('Не удалось найти текст для озвучки на этой странице.');
+      alert('Не удалось найти видимый текст на этой странице.');
       return;
     }
     state.cancelled = false;
