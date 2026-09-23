@@ -3,25 +3,7 @@
 
   var iframe = document.querySelector('iframe');
   var fab = document.getElementById('tts-fab');
-  var settingsBtn = document.getElementById('tts-settings');
-  var state = { playing: false, segments: [], index: 0, audio: null, cancelled: false };
-
-  function getApiKey() {
-    return localStorage.getItem('yandexTtsApiKey') || '';
-  }
-
-  settingsBtn.addEventListener('click', function () {
-    var current = getApiKey();
-    var key = prompt('Введите API-ключ Yandex SpeechKit (для онлайн-озвучки). Оставьте пустым и нажмите OK, чтобы удалить сохранённый ключ.', current || '');
-    if (key === null) return;
-    if (key.trim() === '') {
-      localStorage.removeItem('yandexTtsApiKey');
-      alert('Ключ удалён. Будет использоваться офлайн-голос устройства.');
-    } else {
-      localStorage.setItem('yandexTtsApiKey', key.trim());
-      alert('Ключ сохранён локально на этом устройстве.');
-    }
-  });
+  var state = { playing: false, cancelled: false };
 
   function extractSegments() {
     var doc;
@@ -48,7 +30,7 @@
   function pickOfflineVoice() {
     var voices = speechSynthesis.getVoices() || [];
     var ruVoices = voices.filter(function (v) { return v.lang && v.lang.toLowerCase().indexOf('ru') === 0; });
-    var preferredNames = ['milena', 'yuri', 'google'];
+    var preferredNames = ['milena', 'yuri', 'google', 'enhanced', 'premium'];
     for (var i = 0; i < preferredNames.length; i++) {
       var found = ruVoices.find(function (v) { return v.name.toLowerCase().indexOf(preferredNames[i]) !== -1; });
       if (found) return found;
@@ -80,79 +62,10 @@
     next();
   }
 
-  function buildSsml(segments) {
-    var body = segments.map(function (seg) {
-      var escaped = seg.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      var pause = seg.heading ? '700ms' : '450ms';
-      return escaped + '<break time="' + pause + '"/>';
-    }).join(' ');
-    return '<speak>' + body + '</speak>';
-  }
-
-  function speakOnlineChunk(ssmlChunk, apiKey) {
-    var params = new URLSearchParams();
-    params.set('ssml', ssmlChunk);
-    params.set('lang', 'ru-RU');
-    params.set('voice', 'ermil');
-    params.set('format', 'oggopus');
-    return fetch('https://tts.api.cloud.yandex.net/speech/v1/tts:synthesize', {
-      method: 'POST',
-      headers: { 'Authorization': 'Api-Key ' + apiKey },
-      body: params
-    }).then(function (resp) {
-      if (!resp.ok) throw new Error('Yandex TTS request failed: ' + resp.status);
-      return resp.blob();
-    }).then(function (blob) {
-      return new Promise(function (resolve, reject) {
-        var url = URL.createObjectURL(blob);
-        var audio = new Audio(url);
-        state.audio = audio;
-        audio.onended = function () { URL.revokeObjectURL(url); resolve(); };
-        audio.onerror = function (e) { URL.revokeObjectURL(url); reject(e); };
-        audio.play().catch(reject);
-      });
-    });
-  }
-
-  function chunkSegments(segments, maxLen) {
-    var chunks = [];
-    var current = [];
-    var len = 0;
-    segments.forEach(function (seg) {
-      if (len + seg.text.length > maxLen && current.length) {
-        chunks.push(current);
-        current = [];
-        len = 0;
-      }
-      current.push(seg);
-      len += seg.text.length;
-    });
-    if (current.length) chunks.push(current);
-    return chunks;
-  }
-
-  function speakOnline(segments, apiKey, onDone, onFail) {
-    var chunks = chunkSegments(segments, 900);
-    var i = 0;
-    function next() {
-      if (state.cancelled || i >= chunks.length) { onDone(); return; }
-      var ssml = buildSsml(chunks[i]);
-      speakOnlineChunk(ssml, apiKey).then(function () {
-        i++;
-        next();
-      }).catch(function (err) {
-        console.error('Yandex TTS failed, falling back to offline voice:', err);
-        onFail();
-      });
-    }
-    next();
-  }
-
   function stop() {
     state.cancelled = true;
     state.playing = false;
     speechSynthesis.cancel();
-    if (state.audio) { state.audio.pause(); state.audio = null; }
     fab.textContent = '🔊';
   }
 
@@ -166,21 +79,10 @@
     state.playing = true;
     fab.textContent = '⏸';
 
-    var apiKey = getApiKey();
-    var online = navigator.onLine && apiKey;
-
-    function finish() {
+    speakOffline(segments, function () {
       state.playing = false;
       fab.textContent = '🔊';
-    }
-
-    if (online) {
-      speakOnline(segments, apiKey, finish, function () {
-        speakOffline(segments, finish);
-      });
-    } else {
-      speakOffline(segments, finish);
-    }
+    });
   }
 
   fab.addEventListener('click', function () {
