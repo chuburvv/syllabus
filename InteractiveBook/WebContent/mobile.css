@@ -1,0 +1,56 @@
+/* The native view owns the device safe area; only the reader and menu scroll. */
+:root { --header-height: 112px; --reader-height: 100dvh; }
+html, body { height:100%; width:100%; overflow:hidden; scroll-behavior:auto; }
+body { -webkit-text-size-adjust:100%; }
+.topbar { position:fixed; inset:0 0 auto; padding:8px 12px; gap:8px; flex-wrap:wrap; }
+.topbar .brand { min-width:0; font-size:.85rem; }
+.topbar .brand small { display:none; }
+#burger { display:inline-flex; align-items:center; justify-content:center; order:0; }
+#burger svg { flex:none; }
+#themeBtn { order:0; }
+.filter { order:2; width:100%; display:flex; flex-wrap:nowrap; overflow-x:auto; gap:6px; padding-bottom:2px; }
+.filter .btn { flex:none; font-size:.82rem; padding:8px 10px; }
+.btn { min-height:44px; min-width:44px; touch-action:manipulation; }
+.progress-label { display:block; order:3; width:100%; font-size:.75rem; }
+#printBtn { display:none; }
+.progress { position:fixed; top:var(--header-height); left:0; right:0; z-index:51; height:3px; }
+.layout { display:block; min-height:0; }
+main { position:fixed; top:calc(var(--header-height) + 3px); left:0; right:0; bottom:0; max-width:none; padding:20px 16px 40px; overflow-y:auto; overflow-x:hidden; overscroll-behavior-y:contain; -webkit-overflow-scrolling:touch; scroll-padding-top:16px; }
+main > * { max-width:900px; margin-left:auto; margin-right:auto; }
+.titlepage { padding:8px 0 24px; margin-bottom:28px; }
+.titlepage h1 { font-size:clamp(1.55rem,5.5vw,2rem); }
+.titlepage .subtitle { font-size:1rem; }
+.part { margin-bottom:36px; }
+.part-header h2 { font-size:1.6rem; overflow-wrap:anywhere; }
+.topic { padding:16px; min-width:0; }
+.topic-head { display:flex; flex-direction:column; gap:12px; }
+.topic-head h3 { font-size:1.25rem; overflow-wrap:anywhere; }
+.studied { min-height:44px; padding:8px 12px; align-self:flex-start; }
+input[type="checkbox"] { width:22px; height:22px; flex-shrink:0; accent-color:var(--accent); }
+.levels,.answer-pair { grid-template-columns:minmax(0,1fr); }
+.level,.answer,.case,.answer-debrief { min-width:0; padding:12px; }
+main p, main li, main a { overflow-wrap:anywhere; }
+main a { text-underline-offset:3px; }
+.checks label { min-height:44px; padding:6px 0; }
+details summary { min-height:48px; padding:12px; touch-action:manipulation; }
+details > :not(summary) { padding-left:12px; padding-right:12px; }
+.tbl-wrap { max-width:100%; overflow-x:auto; overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch; border:1px solid var(--border); border-radius:6px; }
+.tbl { min-width:540px; margin:0; }
+.tbl th,.tbl td { min-width:115px; overflow-wrap:normal; }
+.table-hint { font-size:.8rem; color:var(--fg-muted); margin:8px 0 4px; }
+pre.code { max-width:100%; }
+#menuBackdrop { position:fixed; inset:var(--header-height) 0 0; background:rgba(0,0,0,.35); z-index:59; border:0; }
+#menuBackdrop[hidden] { display:none; }
+.sidebar { position:fixed; z-index:60; left:0; top:calc(var(--header-height) + 3px); bottom:auto; height:calc(var(--reader-height) - var(--header-height) - 3px); width:min(92vw,380px); padding:12px 12px 24px; transform:translateX(-105%); visibility:hidden; transition:transform .18s,visibility .18s; overscroll-behavior:contain; }
+body.side-open .sidebar { transform:translateX(0); visibility:visible; }
+.menu-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; }
+.sidebar input { font-size:16px; min-height:44px; }
+.toc a,.toc ul a { min-height:44px; padding:10px 8px; font-size:.92rem; overflow-wrap:anywhere; }
+.toc .toc-part { align-items:flex-start; }
+.toc .caret { flex-shrink:0; padding-top:4px; }
+.toc a.current { color:var(--accent); }
+:focus-visible { outline:3px solid var(--link); outline-offset:2px; }
+@media (min-width:821px) { main { padding:28px 40px 60px; } .levels,.answer-pair { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:360px) { main { padding-left:10px; padding-right:10px; } .topic { padding:12px; } }
+@media (prefers-reduced-motion:reduce) { *,*::before { transition:none!important; scroll-behavior:auto!important; } }
+@media print { html,body { height:auto; overflow:visible; } main { position:static; overflow:visible; padding:0; } .sidebar,#menuBackdrop,.table-hint { display:none!important; } .tbl { min-width:0; } .tbl-wrap { overflow:visible; } }

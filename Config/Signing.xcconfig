@@ -1,0 +1,4 @@
+// Shared defaults. Personal signing settings stay in the ignored local file.
+PRODUCT_BUNDLE_IDENTIFIER = com.example.interactivebook
+CODE_SIGN_STYLE = Automatic
+#include? "Local.xcconfig"
