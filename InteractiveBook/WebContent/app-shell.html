@@ -12,9 +12,6 @@
   <link rel="apple-touch-icon" href="../Assets.xcassets/AppIcon.appiconset/AppIcon.png">
   <style>
     html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #ffffff; }
-    #tabbar { display: flex; height: 44px; background: #1c1c1e; flex-shrink: 0; }
-    #tabbar button { flex: 1; border: none; background: transparent; color: rgba(255,255,255,0.6); font-size: 13px; font-family: -apple-system, sans-serif; cursor: pointer; border-bottom: 2px solid transparent; }
-    #tabbar button.active { color: #fff; border-bottom-color: #fc3f1d; font-weight: 600; }
     #app-wrap { display: flex; flex-direction: column; width: 100%; height: 100%; }
     iframe { border: 0; width: 100%; flex: 1; display: block; }
     #tts-fab {
@@ -35,10 +32,6 @@
 </head>
 <body>
   <div id="app-wrap">
-    <div id="tabbar">
-      <button type="button" data-src="index.html" class="active">Учебник</button>
-      <button type="button" data-src="system-design-tpm.html">System Design TPM</button>
-    </div>
     <iframe id="content-frame" src="index.html" title="Interactive Book"></iframe>
   </div>
   <button id="ai-voice-toggle" aria-label="Включить ИИ-голос">🤖</button>
@@ -49,18 +42,6 @@
         navigator.serviceWorker.register('sw.js').catch((err) => console.error('SW registration failed:', err));
       });
     }
-    var tabButtons = document.querySelectorAll('#tabbar button');
-    var frame = document.getElementById('content-frame');
-    tabButtons.forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        tabButtons.forEach(function (b) { b.classList.remove('active'); });
-        btn.classList.add('active');
-        var src = btn.getAttribute('data-src');
-        if (frame.getAttribute('src') !== src) {
-          frame.setAttribute('src', src);
-        }
-      });
-    });
   </script>
   <script type="module" src="ai-voice.js"></script>
   <script src="tts.js"></script>
