@@ -1,10 +1,11 @@
-const CACHE_NAME = 'interactive-book-v1';
+const CACHE_NAME = 'interactive-book-v2';
 const ASSETS = [
   './app-shell.html',
   './index.html',
   './mobile.css',
   './reader.js',
-  './manifest.json'
+  './manifest.json',
+  './tts.js'
 ];
 
 self.addEventListener('install', (event) => {
@@ -25,6 +26,7 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  if (event.request.url.indexOf('tts.api.cloud.yandex.net') !== -1) return;
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
