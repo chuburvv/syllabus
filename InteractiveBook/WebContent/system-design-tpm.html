@@ -46,6 +46,23 @@ table.tbl th{background:#f1f3f6;color:var(--muted);font-weight:600}
 ul,ol{padding-left:24px}li{margin:3px 0}
 footer{margin-top:60px;color:var(--muted);font-size:13px}
 @media (max-width:980px){.layout{grid-template-columns:1fr}aside{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}main{padding:24px 18px}}
+    @media (max-width:600px){
+  body{font-size:15px}
+  main{padding:16px 14px 60px}
+  header.hero h1{font-size:24px}
+  header.hero p{font-size:14.5px}
+  section.block>h2{font-size:20px}
+  h3{font-size:16px}
+  .card{padding:14px 16px}
+  table.tbl{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
+  table.tbl thead,table.tbl tbody{display:table;width:100%}
+  table.tbl th,table.tbl td{white-space:normal;font-size:13px;padding:6px 8px}
+  pre{font-size:12px;padding:10px 12px}
+  .diagram .box{font-size:12px;padding:5px 9px}
+  .meta{gap:6px}
+  .chip{font-size:11px;padding:4px 9px}
+  details.q summary{padding:10px 14px;font-size:14.5px}
+}
 @media print{aside{display:none}.layout{display:block}main{max-width:none;padding:0}details.q .body{display:block}pre{white-space:pre-wrap}}
 </style></head><body><div class="layout">
 <aside><div class="logo"><i></i>Яндекс · PM / TPM</div><h2>Разделы</h2><nav><a href="#sd-intro">Как проходит секция и как отвечать</a><a href="#sd-glossary">Глоссарий и строительные блоки</a><a href="#sd-case-payments">Разбор A. Платёжный сервис уровня СБП: переводы по номеру телефона</a><a href="#sd-case-notifications">Разбор B. Система нотификаций: push, SMS, email</a><a href="#sd-case-gateway">Разбор C. API gateway и распределённый rate limiter</a><a href="#sd-case-migration">Разбор D. Миграция монолита на микросервисы без даунтайма</a><a href="#sd-case-taxi">Разбор E. Сервис заказа такси: подбор ближайшего водителя</a><a href="#sd-plan-7days">План подготовки на 7 дней</a><a href="#sd-phrases">Фразы, которые показывают уровень</a></nav></aside>
