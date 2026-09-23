@@ -2,39 +2,44 @@
   'use strict';
 
   var iframe = document.querySelector('iframe');
-  var fab = document.getElementById('tts-fab');
+  var stopBtn = document.getElementById('tts-stop');
   var state = { playing: false, cancelled: false };
+  var HEADING_RE = /^h([1-6])$/;
+  var BLOCK_SELECTOR = 'h1, h2, h3, h4, h5, h6, p, li, blockquote';
 
-  function isVisible(node) {
-    if (!(node instanceof node.ownerDocument.defaultView.HTMLElement)) return false;
-    if (node.offsetParent === null && node.ownerDocument.defaultView.getComputedStyle(node).position !== 'fixed') return false;
-    var style = node.ownerDocument.defaultView.getComputedStyle(node);
-    if (style.display === 'none' || style.visibility === 'hidden' || parseFloat(style.opacity) === 0) return false;
-    var rect = node.getBoundingClientRect();
-    if (rect.width === 0 && rect.height === 0) return false;
-    return true;
+  function cleanText(node) {
+    return (node.textContent || '').replace(/\s+/g, ' ').trim();
   }
 
-  function extractSegments() {
-    var doc;
+  function getDoc() {
     try {
-      doc = iframe.contentDocument || iframe.contentWindow.document;
+      return iframe.contentDocument || iframe.contentWindow.document;
     } catch (e) {
-      return [];
+      return null;
     }
-    if (!doc || !doc.body) return [];
-    var nodes = doc.body.querySelectorAll('h1, h2, h3, h4, h5, p, li, blockquote');
-    var segments = [];
+  }
+
+  function buildFlatList(doc) {
+    var nodes = doc.body.querySelectorAll(BLOCK_SELECTOR);
+    var list = [];
     nodes.forEach(function (node) {
-      var closestSkip = node.closest('nav, header, footer, button, script, style, [aria-hidden="true"]');
-      if (closestSkip) return;
-      if (!isVisible(node)) return;
-      var text = (node.textContent || '').replace(/\s+/g, ' ').trim();
+      if (node.closest('nav, header, footer, script, style, [aria-hidden="true"]')) return;
+      var text = cleanText(node);
       if (!text || text.length < 2) return;
-      var tag = node.tagName.toLowerCase();
-      var isHeading = /^h[1-5]$/.test(tag);
-      segments.push({ text: text, heading: isHeading });
+      var m = HEADING_RE.exec(node.tagName.toLowerCase());
+      list.push({ node: node, text: text, level: m ? parseInt(m[1], 10) : null });
     });
+    return list;
+  }
+
+  function collectSection(startIndex, list) {
+    var startLevel = list[startIndex].level;
+    var segments = [{ text: list[startIndex].text, heading: true }];
+    for (var i = startIndex + 1; i < list.length; i++) {
+      var item = list[i];
+      if (item.level !== null && item.level <= startLevel) break;
+      segments.push({ text: item.text, heading: item.level !== null });
+    }
     return segments;
   }
 
@@ -51,12 +56,20 @@
     return ruVoices[0] || voices[0] || null;
   }
 
-  function speakOffline(segments, onDone) {
+  function speak(segments) {
     var voice = pickOfflineVoice();
     var i = 0;
+    state.cancelled = false;
+    state.playing = true;
+    stopBtn.style.display = 'flex';
+
+    function finish() {
+      state.playing = false;
+      stopBtn.style.display = 'none';
+    }
 
     function next() {
-      if (state.cancelled || i >= segments.length) { onDone(); return; }
+      if (state.cancelled || i >= segments.length) { finish(); return; }
       var seg = segments[i];
       var utter = new SpeechSynthesisUtterance(seg.text);
       if (voice) utter.voice = voice;
@@ -77,32 +90,53 @@
     state.cancelled = true;
     state.playing = false;
     speechSynthesis.cancel();
-    fab.textContent = '🔊';
+    stopBtn.style.display = 'none';
   }
 
-  function start() {
-    var segments = extractSegments();
-    if (!segments.length) {
-      alert('Не удалось найти видимый текст на этой странице.');
-      return;
-    }
-    state.cancelled = false;
-    state.playing = true;
-    fab.textContent = '⏸';
+  stopBtn.addEventListener('click', stop);
 
-    speakOffline(segments, function () {
-      state.playing = false;
-      fab.textContent = '🔊';
+  function attachButtons(doc) {
+    var headingNodes = doc.body.querySelectorAll('h1, h2, h3, h4, h5, h6');
+    headingNodes.forEach(function (h) {
+      if (h.dataset.ttsAttached) return;
+      if (h.closest('nav, header, footer, [aria-hidden="true"]')) return;
+      if (!cleanText(h)) return;
+      h.dataset.ttsAttached = '1';
+      var btn = doc.createElement('button');
+      btn.type = 'button';
+      btn.textContent = '🔊';
+      btn.setAttribute('aria-label', 'Озвучить раздел');
+      btn.style.cssText = 'display:inline-block;margin-left:8px;border:none;background:rgba(0,0,0,0.06);' +
+        'border-radius:50%;width:1.5em;height:1.5em;font-size:0.6em;line-height:1.5em;text-align:center;' +
+        'cursor:pointer;vertical-align:middle;';
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (state.playing) { stop(); }
+        var curDoc = getDoc();
+        if (!curDoc) return;
+        var list = buildFlatList(curDoc);
+        var idx = list.findIndex(function (item) { return item.node === h; });
+        if (idx === -1) return;
+        var segments = collectSection(idx, list);
+        speak(segments);
+      });
+      h.appendChild(btn);
     });
   }
 
-  fab.addEventListener('click', function () {
-    if (state.playing) {
-      stop();
-    } else {
-      start();
-    }
-  });
+  function init() {
+    var doc = getDoc();
+    if (!doc || !doc.body) { setTimeout(init, 500); return; }
+    attachButtons(doc);
+    var observer = new MutationObserver(function () {
+      attachButtons(doc);
+    });
+    observer.observe(doc.body, { childList: true, subtree: true });
+  }
+
+  iframe.addEventListener('load', init);
+  if (iframe.contentDocument && iframe.contentDocument.readyState === 'complete') init();
 
   if ('speechSynthesis' in window) {
     speechSynthesis.onvoiceschanged = function () {};
